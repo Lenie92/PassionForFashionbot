@@ -40,6 +40,7 @@ def parse_coach_outlet(url):
             raise Exception(f"Не вдалося завантажити сторінку. Код статусу: {response.status_code}")
         
         soup = BeautifulSoup(response.content, 'html.parser')
+        logger.info(soup.prettify())  # Виводимо HTML-структуру
 
         # Назва товару
         name_tag = soup.find("span", {"data-qa": "pdp_txt_pdt_title"})
@@ -47,6 +48,7 @@ def parse_coach_outlet(url):
             logger.error("Назва товару не знайдена.")
             raise Exception("Не вдалося знайти назву товару.")
         name = name_tag.text.strip()
+        logger.info(f"Знайдено назву: {name}")
 
         # Ціна товару
         price_tag = soup.find("span", {"data-qa": "cm_txt_pdt_price"})
@@ -55,6 +57,7 @@ def parse_coach_outlet(url):
             raise Exception("Не вдалося знайти ціну товару.")
         price_text = price_tag.text.strip()
         price_usd = float(price_text.replace("$", "").replace(",", ""))
+        logger.info(f"Знайдено ціну: {price_usd} USD")
 
         # Фото товару
         image_tag = soup.find("img", {"class": "product-thumbnails-slider"})
@@ -62,6 +65,7 @@ def parse_coach_outlet(url):
             logger.error("Зображення товару не знайдено.")
             raise Exception("Не вдалося знайти зображення товару.")
         image_url = image_tag['src']
+        logger.info(f"Знайдено зображення: {image_url}")
 
         logger.info(f"Парсинг завершено: {name}, {price_usd} USD")
         return {
@@ -77,6 +81,7 @@ def parse_coach_outlet(url):
     except Exception as e:
         logger.error(f"Помилка парсингу: {e}")
         raise
+
 
     
 
