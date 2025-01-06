@@ -28,14 +28,47 @@ def calculate_price(price_usd):
     markup = 0.18 if price_usd < 50 else 0.15
     price_uah = (price_usd + (price_usd * markup)) * USD_TO_UAH
     return round(price_uah, 2)
+    
+def parse_coach_outlet(url):
+    """Парсинг сайту Coach Outlet"""
+    logger.info(f"Парсинг URL: {url}")
+    response = requests.get(url, timeout=10)
+    if response.status_code != 200:
+        logger.error(f"Помилка завантаження сторінки: {response.status_code}")
+        raise Exception("Не вдалося завантажити сторінку")
+
+    soup = BeautifulSoup(response.content, 'html.parser')
+
+    # Назва товару
+    name = soup.find("h1", {"class": "pdp-title"}).text.strip()
+
+    # Ціна товару
+    price_text = soup.find("span", {"class": "product-sales-price"}).text.strip()
+    price_usd = float(price_text.replace("$", "").replace(",", ""))
+
+    # Фото товару
+    image_tag = soup.find("img", {"class": "pdp-image"})
+    image_url = image_tag['src'] if image_tag else None
+
+    if not image_url:
+        logger.error("Зображення товару не знайдено.")
+        raise Exception("Не вдалося знайти зображення товару.")
+
+    logger.info(f"Парсинг завершено: {name}, {price_usd} USD")
+    return {
+        "name": name,
+        "price_usd": price_usd,
+        "image": image_url,
+        "description": "Опис товару відсутній",  # Опис можна додати, якщо знайдете
+    }
+    
 
 def parse_michael_kors(url):
     """Парсинг сайту Michael Kors"""
     logger.info(f"Парсинг URL: {url}")
-    response = requests.get(url)
     try:
     response = requests.get(url, timeout=10)
-except requests.exceptions.Timeout:
+    except requests.exceptions.Timeout:
     logger.error(f"Тайм-аут під час завантаження URL: {url}")
     raise Exception("Сервер не відповідає. Спробуйте пізніше.")
 
@@ -71,6 +104,8 @@ async def post_to_channel(update, context):
         # Визначаємо, з якого сайту парсити
         if "michaelkors.com" in url:
             product_info = parse_michael_kors(url)
+        elif "coachoutlet.com" in url:
+            product_info = parse_coach_outlet(url)    
         else:
             await update.message.reply_text("На жаль, цей сайт поки не підтримується.")
             return
