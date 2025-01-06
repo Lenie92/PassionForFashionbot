@@ -66,11 +66,10 @@ def parse_coach_outlet(url):
 def parse_michael_kors(url):
     """Парсинг сайту Michael Kors"""
     logger.info(f"Парсинг URL: {url}")
-    try:
+
     response = requests.get(url, timeout=10)
-    except requests.exceptions.Timeout:
-    logger.error(f"Тайм-аут під час завантаження URL: {url}")
-    raise Exception("Сервер не відповідає. Спробуйте пізніше.")
+   
+
 
     if response.status_code != 200:
         logger.error(f"Помилка завантаження сторінки: {response.status_code}")
