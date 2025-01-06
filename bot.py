@@ -32,35 +32,52 @@ def calculate_price(price_usd):
 def parse_coach_outlet(url):
     """Парсинг сайту Coach Outlet"""
     logger.info(f"Парсинг URL: {url}")
-    response = requests.get(url, timeout=10)
-    if response.status_code != 200:
-        logger.error(f"Помилка завантаження сторінки: {response.status_code}")
-        raise Exception("Не вдалося завантажити сторінку")
+    try:
+        # Завантаження сторінки
+        response = requests.get(url, timeout=10)
+        if response.status_code != 200:
+            logger.error(f"Помилка завантаження сторінки: {response.status_code}")
+            raise Exception(f"Не вдалося завантажити сторінку. Код статусу: {response.status_code}")
+        
+        soup = BeautifulSoup(response.content, 'html.parser')
 
-    soup = BeautifulSoup(response.content, 'html.parser')
+        # Назва товару
+        name_tag = soup.find("span", {"data-qa": "pdp_txt_pdt_title"})
+        if not name_tag:
+            logger.error("Назва товару не знайдена.")
+            raise Exception("Не вдалося знайти назву товару.")
+        name = name_tag.text.strip()
 
-    # Назва товару
-    name = soup.find("h1", {"class": "pdp-title"}).text.strip()
+        # Ціна товару
+        price_tag = soup.find("span", {"data-qa": "cm_txt_pdt_price"})
+        if not price_tag:
+            logger.error("Ціна товару не знайдена.")
+            raise Exception("Не вдалося знайти ціну товару.")
+        price_text = price_tag.text.strip()
+        price_usd = float(price_text.replace("$", "").replace(",", ""))
 
-    # Ціна товару
-    price_text = soup.find("span", {"class": "product-sales-price"}).text.strip()
-    price_usd = float(price_text.replace("$", "").replace(",", ""))
+        # Фото товару
+        image_tag = soup.find("img", {"class": "product-thumbnails-slider"})
+        if not image_tag or not image_tag.get('src'):
+            logger.error("Зображення товару не знайдено.")
+            raise Exception("Не вдалося знайти зображення товару.")
+        image_url = image_tag['src']
 
-    # Фото товару
-    image_tag = soup.find("img", {"class": "pdp-image"})
-    image_url = image_tag['src'] if image_tag else None
+        logger.info(f"Парсинг завершено: {name}, {price_usd} USD")
+        return {
+            "name": name,
+            "price_usd": price_usd,
+            "image": image_url,
+            "description": "Опис товару відсутній",  # За бажанням можна доповнити
+        }
 
-    if not image_url:
-        logger.error("Зображення товару не знайдено.")
-        raise Exception("Не вдалося знайти зображення товару.")
+    except requests.exceptions.Timeout:
+        logger.error("Тайм-аут під час завантаження сторінки.")
+        raise Exception("Сервер не відповідає. Спробуйте пізніше.")
+    except Exception as e:
+        logger.error(f"Помилка парсингу: {e}")
+        raise
 
-    logger.info(f"Парсинг завершено: {name}, {price_usd} USD")
-    return {
-        "name": name,
-        "price_usd": price_usd,
-        "image": image_url,
-        "description": "Опис товару відсутній",  # Опис можна додати, якщо знайдете
-    }
     
 
 def parse_michael_kors(url):
