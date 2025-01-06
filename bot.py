@@ -1,5 +1,5 @@
 from telegram import Bot
-from telegram.ext import CommandHandler, MessageHandler, Filters, Updater
+from telegram.ext import CommandHandler, MessageHandler, filters, ApplicationBuilder
 import requests
 from bs4 import BeautifulSoup
 
