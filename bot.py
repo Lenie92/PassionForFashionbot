@@ -1,5 +1,4 @@
-from telegram import Bot
-from telegram.ext import CommandHandler, MessageHandler, filters, ApplicationBuilder
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters
 import requests
 from bs4 import BeautifulSoup
 
@@ -10,8 +9,8 @@ CHANNEL_ID = "@passion_for_fashion_ukraine"
 # Курс валют
 USD_TO_UAH = 43  # Вставте актуальний курс
 
-def start(update, context):
-    update.message.reply_text("Привіт! Надішліть мені посилання на товар.")
+async def start(update, context):
+    await update.message.reply_text("Привіт! Надішліть мені посилання на товар.")
 
 def calculate_price(price_usd):
     """Прорахунок ціни з націнкою"""
@@ -41,7 +40,7 @@ def parse_michael_kors(url):
         "description": "Опис товару відсутній",  # Опис можна додати, якщо знайдете
     }
 
-def post_to_channel(update, context):
+async def post_to_channel(update, context):
     """Отримання посилання та публікація товару в канал"""
     url = update.message.text
     try:
@@ -49,7 +48,7 @@ def post_to_channel(update, context):
         if "michaelkors.com" in url:
             product_info = parse_michael_kors(url)
         else:
-            update.message.reply_text("На жаль, цей сайт поки не підтримується.")
+            await update.message.reply_text("На жаль, цей сайт поки не підтримується.")
             return
 
         # Розрахунок ціни
@@ -59,18 +58,19 @@ def post_to_channel(update, context):
         message = f"{product_info['name']}\nЦіна: {price_uah} грн\n{product_info['description']}"
         
         # Публікація в канал
-        context.bot.send_photo(chat_id=CHANNEL_ID, photo=product_info['image'], caption=message)
-        update.message.reply_text("Товар успішно опубліковано!")
+        await context.bot.send_photo(chat_id=CHANNEL_ID, photo=product_info['image'], caption=message)
+        await update.message.reply_text("Товар успішно опубліковано!")
     except Exception as e:
-        update.message.reply_text(f"Помилка: {e}")
+        await update.message.reply_text(f"Помилка: {e}")
 
 # Запускаємо бота
+def main():
+    app = ApplicationBuilder().token(TOKEN).build()
+
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, post_to_channel))
+
+    app.run_polling()
+
 if __name__ == "__main__":
-    updater = Updater(TOKEN, use_context=True)
-    dp = updater.dispatcher
-
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, post_to_channel))
-
-    updater.start_polling()
-    updater.idle()
+    main()
