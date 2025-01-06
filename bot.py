@@ -1,6 +1,14 @@
+import logging
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters
 import requests
 from bs4 import BeautifulSoup
+
+# Налаштування логування
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 
 # Вставте ваш токен і ID каналу
 TOKEN = "7978500466:AAFc3SRL6NpBjLK8i6KeGftjGvpK6V2vOos"
@@ -10,29 +18,38 @@ CHANNEL_ID = "@passion_for_fashion_ukraine"
 USD_TO_UAH = 43  # Вставте актуальний курс
 
 async def start(update, context):
+    """Обробник команди /start"""
+    logger.info("Отримана команда /start")
     await update.message.reply_text("Привіт! Надішліть мені посилання на товар.")
 
 def calculate_price(price_usd):
     """Прорахунок ціни з націнкою"""
+    logger.info(f"Розрахунок ціни для {price_usd} USD")
     markup = 0.18 if price_usd < 50 else 0.15
     price_uah = (price_usd + (price_usd * markup)) * USD_TO_UAH
     return round(price_uah, 2)
 
 def parse_michael_kors(url):
     """Парсинг сайту Michael Kors"""
+    logger.info(f"Парсинг URL: {url}")
     response = requests.get(url)
+    if response.status_code != 200:
+        logger.error(f"Помилка завантаження сторінки: {response.status_code}")
+        raise Exception("Не вдалося завантажити сторінку")
+
     soup = BeautifulSoup(response.content, 'html.parser')
-    
+
     # Назва товару
     name = soup.find("h1", {"class": "product-name"}).text.strip()
-    
+
     # Ціна товару
     price_text = soup.find("span", {"class": "price"}).text.strip()
     price_usd = float(price_text.replace("$", "").replace(",", ""))
-    
+
     # Фото товару
     image_url = soup.find("img", {"class": "product-gallery__image"})['src']
-    
+
+    logger.info(f"Парсинг завершено: {name}, {price_usd} USD")
     return {
         "name": name,
         "price_usd": price_usd,
@@ -43,6 +60,7 @@ def parse_michael_kors(url):
 async def post_to_channel(update, context):
     """Отримання посилання та публікація товару в канал"""
     url = update.message.text
+    logger.info(f"Отримано посилання: {url}")
     try:
         # Визначаємо, з якого сайту парсити
         if "michaelkors.com" in url:
@@ -61,10 +79,12 @@ async def post_to_channel(update, context):
         await context.bot.send_photo(chat_id=CHANNEL_ID, photo=product_info['image'], caption=message)
         await update.message.reply_text("Товар успішно опубліковано!")
     except Exception as e:
+        logger.error(f"Помилка обробки: {e}")
         await update.message.reply_text(f"Помилка: {e}")
 
 # Запускаємо бота
 def main():
+    logger.info("Запуск бота")
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
